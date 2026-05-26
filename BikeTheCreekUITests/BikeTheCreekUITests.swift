@@ -8,36 +8,84 @@
 import XCTest
 
 final class BikeTheCreekUITests: XCTestCase {
+    private let routeIDs = [
+        "route-card-leisure",
+        "route-card-family",
+        "route-card-bramalea",
+        "route-card-caledon",
+        "route-card-regional"
+    ]
 
     override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-
-        // In UI tests it is usually best to stop immediately when a failure occurs.
         continueAfterFailure = false
-
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
-    }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
-        let app = XCUIApplication()
-        app.launch()
-
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // XCUIAutomation Documentation
-        // https://developer.apple.com/documentation/xcuiautomation
+    func testEveryRouteCanPreviewFromStartToFinishAtHome() throws {
+        let app = launchAppForUITesting()
+        
+        XCTAssertTrue(app.otherElements["route-selection-panel"].waitForExistence(timeout: 6))
+        
+        for routeID in routeIDs {
+            tapRouteCard(routeID, in: app)
+            
+            let previewButton = app.buttons["preview-route-button"]
+            XCTAssertTrue(previewButton.waitForExistence(timeout: 4), "Preview button should exist for \(routeID)")
+            XCTAssertTrue(previewButton.isEnabled, "Preview button should be enabled for \(routeID)")
+            previewButton.tap()
+            
+            let finishCue = app.otherElements["route-preview-finished"]
+            XCTAssertTrue(finishCue.waitForExistence(timeout: 8), "Route preview should finish for \(routeID)")
+        }
+    }
+    
+    @MainActor
+    func testRideControlsCanStartAndStopWithoutRoutePreview() throws {
+        let app = launchAppForUITesting()
+        
+        let startStopButton = app.buttons["start-stop-ride-button"]
+        XCTAssertTrue(startStopButton.waitForExistence(timeout: 6))
+        XCTAssertTrue(startStopButton.isEnabled)
+        
+        startStopButton.tap()
+        XCTAssertTrue(app.otherElements["navigation-cue-banner"].waitForExistence(timeout: 4))
+        
+        startStopButton.tap()
+        XCTAssertTrue(startStopButton.waitForExistence(timeout: 4))
     }
 
     @MainActor
     func testLaunchPerformance() throws {
-        // This measures how long it takes to launch your application.
         measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
+            _ = launchAppForUITesting()
         }
+    }
+    
+    @MainActor
+    private func launchAppForUITesting() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = ["UITESTING"]
+        app.launch()
+        return app
+    }
+    
+    @MainActor
+    private func tapRouteCard(_ identifier: String, in app: XCUIApplication) {
+        let card = app.buttons[identifier]
+        if card.waitForExistence(timeout: 2), card.isHittable {
+            card.tap()
+            return
+        }
+        
+        let routeScrollView = app.scrollViews.firstMatch
+        for _ in 0..<6 {
+            routeScrollView.swipeLeft()
+            if card.waitForExistence(timeout: 1), card.isHittable {
+                card.tap()
+                return
+            }
+        }
+        
+        XCTFail("Could not find route card \(identifier)")
     }
 }

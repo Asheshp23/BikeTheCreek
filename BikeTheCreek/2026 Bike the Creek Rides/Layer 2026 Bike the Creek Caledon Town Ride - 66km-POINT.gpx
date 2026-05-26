@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<gpx version="1.1" creator="GDAL 3.6.3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ogr="http://osgeo.org/gdal" xmlns="http://www.topografix.com/GPX/1/1" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+<metadata><bounds minlat="43.717210000000001" minlon="-79.921342129999999" maxlat="43.751683450000002" maxlon="-79.790379999999999"/></metadata>                
+<wpt lat="43.75168345" lon="-79.92134213">
+  <name>Cheltenham General Store</name>
+  <extensions>
+    <ogr:description>Supplies, snacks, beverages, etc.</ogr:description>
+  </extensions>
+</wpt>
+<wpt lat="43.71781" lon="-79.79066">
+  <name>Start of 2026 Bike the Creek Caledon Town Ride - 66km</name>
+  <extensions>
+    <ogr:description>Elevation: 230 m</ogr:description>
+  </extensions>
+</wpt>
+<wpt lat="43.71721" lon="-79.79038">
+  <name>End of 2026 Bike the Creek Caledon Town Ride - 66km</name>
+  <extensions>
+    <ogr:description>Elevation: 229 m</ogr:description>
+  </extensions>
+</wpt>
+</gpx>

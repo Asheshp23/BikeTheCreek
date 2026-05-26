@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<gpx version="1.1" creator="GDAL 3.6.3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ogr="http://osgeo.org/gdal" xmlns="http://www.topografix.com/GPX/1/1" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+<metadata><bounds minlat="43.717340000000000" minlon="-79.790490000000005" maxlat="43.717950000000002" maxlon="-79.790440000000004"/></metadata>                
+<wpt lat="43.71795" lon="-79.79044">
+  <name>Start of 2026 Bike the Creek Regional Ride 69 Km</name>
+  <extensions>
+    <ogr:description>Elevation: 231 m</ogr:description>
+  </extensions>
+</wpt>
+<wpt lat="43.71734" lon="-79.79049">
+  <name>End of 2026 Bike the Creek Regional Ride 69 Km</name>
+  <extensions>
+    <ogr:description>Elevation: 229 m</ogr:description>
+  </extensions>
+</wpt>
+</gpx>

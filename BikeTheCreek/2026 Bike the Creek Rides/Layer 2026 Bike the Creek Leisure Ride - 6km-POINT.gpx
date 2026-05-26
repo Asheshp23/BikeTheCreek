@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<gpx version="1.1" creator="GDAL 3.6.3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ogr="http://osgeo.org/gdal" xmlns="http://www.topografix.com/GPX/1/1" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+<metadata><bounds minlat="43.717370000000003" minlon="-79.790819999999997" maxlat="43.717619999999997" maxlon="-79.790530000000004"/></metadata>                
+<wpt lat="43.71762" lon="-79.79082">
+  <name>Start of 2026 Bike the Creek Leisure Ride - 6km</name>
+  <extensions>
+    <ogr:description>Elevation: 229 m</ogr:description>
+  </extensions>
+</wpt>
+<wpt lat="43.71737" lon="-79.79053">
+  <name>End of 2026 Bike the Creek Leisure Ride - 6km</name>
+  <extensions>
+    <ogr:description>Elevation: 229 m</ogr:description>
+  </extensions>
+</wpt>
+</gpx>
