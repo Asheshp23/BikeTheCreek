@@ -60,6 +60,18 @@ enum RideType: String, CaseIterable, Identifiable {
   }
 }
 
+extension RideType {
+  var distanceInKm: Double {
+    switch self {
+    case .leisure: return 6.0
+    case .family: return 14.0
+    case .bramalea: return 36.0
+    case .caledon: return 66.0
+    case .regional: return 69.0
+    }
+  }
+}
+
 struct BikeRoute: Identifiable, Equatable, Hashable {
   let id: RideType
   let name: String
