@@ -33,9 +33,22 @@
 		0F0ADE982FC4EBFE004E9A9B /* BikeTheCreekUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BikeTheCreekUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		0F1404342FCD0FCC004177C8 /* Exceptions for "BikeTheCreek" folder in "BikeTheCreek" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 0F0ADE802FC4EBFC004E9A9B /* BikeTheCreek */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		0F0ADE832FC4EBFC004E9A9B /* BikeTheCreek */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				0F1404342FCD0FCC004177C8 /* Exceptions for "BikeTheCreek" folder in "BikeTheCreek" target */,
+			);
 			path = BikeTheCreek;
 			sourceTree = "<group>";
 		};
@@ -417,6 +430,7 @@
 				DEVELOPMENT_TEAM = S5C52P9PGP;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BikeTheCreek/Info.plist;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Bike the Creek uses your location to show your cycling position, heading, route progress, and ride metrics.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -450,6 +464,7 @@
 				DEVELOPMENT_TEAM = S5C52P9PGP;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BikeTheCreek/Info.plist;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Bike the Creek uses your location to show your cycling position, heading, route progress, and ride metrics.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

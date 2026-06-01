@@ -1,73 +1,65 @@
 //
-//  MapViewModel.swift
-//  BikeTheCreek
+//  MapMeViewModel.swift
 //
-//  Created by Ashesh Patel on 2026-05-27.
+//  Owns LocationManager + all map state.
+//  View stays completely passive — binds only to this object.
 //
-import Foundation
 import Combine
-import CoreLocation
-import _MapKit_SwiftUI
+import MapKit
+import SwiftUI
 
 @MainActor
-class RideNavigatorViewModel: ObservableObject {
-    @Published var position: MapCameraPosition = .userLocation(fallback: .automatic)
-    @Published var smoothPts: [CLLocationCoordinate2D] = []
-    @Published var markers: [OnLineMarker] = []
-    @Published var mapHeading: Double = 0
-    @Published var routerOpen: Bool = false
-    
-    // Shortcut Logic State
-    @Published var shortcutPath: [CLLocationCoordinate2D] = []
-    @Published var showShortcutSuggest: Bool = false
-    @Published var isCalculatingShortcut: Bool = false
-    
-    private let dataManager: MapDataManager
-    let session: RideSessionManager
-    
-    init(dataManager: MapDataManager, session: RideSessionManager) {
-        self.dataManager = dataManager
-        self.session = session
+@Observable
+final class MapMeViewModel {
+  
+  // MARK: - Dependencies
+  
+  private(set) var locationManager = LocationManager()
+  
+  // MARK: - Map camera
+  
+  /// Keeps the map centred on the user with heading-up orientation.
+  var cameraPosition: MapCameraPosition = .userLocation(
+    followsHeading: true,
+    fallback: .automatic
+  )
+  
+  /// Live heading of the map camera — used to counter-rotate the user arrow
+  /// so it always points in the true travel direction regardless of map tilt/rotate.
+  private(set) var cameraHeading: Double = 0.0
+  
+  // MARK: - Derived / convenience
+  
+  /// Current user coordinate (falls back to a safe zero if unavailable).
+  var userCoordinate: CLLocationCoordinate2D {
+    locationManager.userLocation
+  }
+  
+  /// Breadcrumb trail the user has travelled.
+  var userPath: [CLLocationCoordinate2D] {
+    locationManager.userLocations
+  }
+  
+  /// Rotation angle for the direction arrow:
+  /// device heading minus camera heading keeps the chevron route-aligned
+  /// even when the map is rotated or pitched.
+  var arrowRotation: Double {
+    locationManager.userHeading - cameraHeading
+  }
+  
+  // MARK: - Camera change handler
+  
+  /// Call this from `.onMapCameraChange` in the view.
+  func onCameraChange(_ context: MapCameraUpdateContext) {
+    cameraHeading = context.camera.heading
+  }
+  
+  // MARK: - Actions
+  
+  /// Re-centre the camera on the user's current location.
+  func recentre() {
+    withAnimation(.easeInOut(duration: 0.6)) {
+      cameraPosition = .userLocation(followsHeading: true, fallback: .automatic)
     }
-    
-    func refreshRoute() {
-        guard let route = dataManager.selectedRoute else { return }
-        smoothPts = []
-        markers = []
-        shortcutPath = []
-        showShortcutSuggest = false
-        
-        Task {
-            let (pts, mrk) = await RouteCache.shared.resolve(route)
-            self.smoothPts = pts
-            self.markers = mrk
-        }
-    }
-    
-    func fitRoute() {
-        if let rect = dataManager.selectedRoute?.mapRect {
-            position = .rect(rect)
-        }
-    }
-    
-    func evaluateShortcutEligibility() {
-        guard session.isRecording, shortcutPath.isEmpty, !showShortcutSuggest,
-              let route = dataManager.selectedRoute else { return }
-        
-        // Progress Logic: Time > 60% and Distance < 40%
-        let estSeconds = parseDuration(route.id.durationLabel)
-        let timeProgress = session.elapsedTime / estSeconds
-        let distProgress = (session.totalDistance / 1000.0) / route.id.distanceInKm
-        
-        if timeProgress > 0.6 && distProgress < 0.4 {
-            showShortcutSuggest = true
-        }
-    }
-    
-
-    private func parseDuration(_ label: String) -> Double {
-        let low = label.lowercased().components(separatedBy: "-").first ?? "0"
-        let val = Double(low.filter("0123456789.".contains)) ?? 0
-        return label.contains("hr") ? val * 3600 : val * 60
-    }
+  }
 }
