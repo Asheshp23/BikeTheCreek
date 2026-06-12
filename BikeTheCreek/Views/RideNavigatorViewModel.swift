@@ -24,7 +24,7 @@ final class RideNavigatorViewModel {
   // MARK: - Map / camera state
   
   var cameraPosition : MapCameraPosition = .userLocation(fallback: .automatic)
-  private(set) var cameraHeading: Double = 0
+  var cameraHeading: Double = 0
   
   // MARK: - Route overlay state
   
@@ -36,6 +36,7 @@ final class RideNavigatorViewModel {
   var routerOpen        = false
   var showWorkoutPicker = false          // sheet: pick HealthKit or import file
   var activeSheet       : VisSheet?      // which visualisation to present
+  var showPreviewPicker = false
   
   enum VisSheet: Identifiable {
     case sceneKit, playback, filterMap, export
@@ -73,6 +74,10 @@ final class RideNavigatorViewModel {
     Task { await workoutManager.requestHealthKitPermission() }
   }
   
+  func showRoutePreview() {
+    showPreviewPicker.toggle()
+  }
+  
   func onRouteChanged(_ route: BikeRoute?) {
     if session.isPreviewingRoute || session.isPreviewPaused || session.routePreviewCompleted {
       session.stopRoutePreview(clearPath: true)
@@ -83,10 +88,6 @@ final class RideNavigatorViewModel {
   }
   
   // MARK: - Camera
-  
-  func onCameraChange(_ context: MapCameraUpdateContext) {
-    cameraHeading = context.camera.heading
-  }
   
   func fitRoute() {
     guard let r = dataManager.selectedRoute else { return }
@@ -154,6 +155,9 @@ final class RideNavigatorViewModel {
     guard let route else { return }
     Task.detached(priority: .userInitiated) {
       let (pts, mrk) = await RouteCache.shared.resolve(route)
+      // Yield two run-loop cycles so any active map gesture finishes its
+      // Metal frame before we swap polyline/annotation content.
+      try? await Task.sleep(for: .milliseconds(32))
       await MainActor.run { [weak self] in
         self?.smoothPts = pts
         self?.markers   = mrk

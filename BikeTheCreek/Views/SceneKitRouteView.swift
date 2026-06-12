@@ -28,9 +28,7 @@ struct SceneKitRouteView: View {
 
     var body: some View {
         ZStack {
-            SceneView(scene: vm.scene,
-                      pointOfView: vm.cameraNode,
-                      options: [.allowsCameraControl, .autoenablesDefaultLighting])
+            SCNViewRepresentable(scene: vm.scene, cameraNode: vm.cameraNode)
                 .ignoresSafeArea()
                 .onAppear { vm.build(from: samples) }
                 .onChange(of: samples.count) { _, _ in vm.build(from: samples) }
@@ -63,6 +61,29 @@ struct SceneKitRouteView: View {
         .padding(.vertical, 10)
         .background(.ultraThinMaterial)
         .clipShape(Capsule())
+    }
+}
+
+// MARK: - SCNView wrapper (avoids SceneView's unresolved MSAA resolve-texture crash)
+
+private struct SCNViewRepresentable: UIViewRepresentable {
+    let scene: SCNScene
+    let cameraNode: SCNNode
+
+    func makeUIView(context: Context) -> SCNView {
+        let view = SCNView()
+        view.scene = scene
+        view.pointOfView = cameraNode
+        view.allowsCameraControl = true
+        view.autoenablesDefaultLighting = true
+        view.antialiasingMode = .multisampling4X   // explicit MSAA — no dangling resolve texture
+        view.backgroundColor = .clear
+        return view
+    }
+
+    func updateUIView(_ uiView: SCNView, context: Context) {
+        uiView.scene = scene
+        uiView.pointOfView = cameraNode
     }
 }
 
