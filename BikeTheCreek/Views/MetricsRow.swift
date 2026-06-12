@@ -7,7 +7,7 @@
 import SwiftUI
 
 struct MetricsRow: View {
-  @ObservedObject var session: RideSessionManager
+  let session: RideSessionManager
   private var kmh:  String { String(format:"%.1f", session.currentSpeed*3.6) }
   private var km:   String { String(format:"%.2f", session.totalDistance/1000) }
   private var elev: String { String(format:"%.0f", session.currentElevation) }

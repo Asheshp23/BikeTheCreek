@@ -2,17 +2,9 @@
 //  RideNavigatorViewModel.swift
 //  BikeTheCreek
 //
-//  Created by Ashesh Patel on 2026-05-31.
-//
-
-
-//
-//  RideNavigatorViewModel.swift
-//  BikeTheCreek
-//
 //  Single source of truth for RideNavigatorView.
-//  Owns: MapDataManager, RideSessionManager, LocationManager, all map/camera state.
-//  View stays completely passive — reads and calls only what's exposed here.
+//  Now also owns WorkoutDataManager and exposes entry points
+//  into the four new visualisation screens.
 //
 
 import MapKit
@@ -21,123 +13,198 @@ import SwiftUI
 @MainActor
 @Observable
 final class RideNavigatorViewModel {
-
-    // MARK: - Child managers
-
-    let dataManager = MapDataManager()
-    let session     = RideSessionManager()
-    let location    = LocationManager()
-
-    // MARK: - Map / camera state
-
-    var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
-    private(set) var cameraHeading: Double = 0
-
-    // MARK: - Route overlay state
-
-    private(set) var smoothPts: [CLLocationCoordinate2D] = []
-    private(set) var markers:   [OnLineMarker]           = []
-
-    // MARK: - UI state
-
-    var routerOpen = false
-
-    // MARK: - Derived
-
-    var sessionActive: Bool { session.isPreviewingRoute || session.isRecording }
-
-    /// Counter-rotated heading keeps the user arrow pointing true-north
-    /// regardless of map rotation or pitch.
-    var arrowRotation: Double { location.userHeading - cameraHeading }
-
-    var userCoordinate: CLLocationCoordinate2D { location.userLocation }
-
-    // MARK: - Lifecycle
-
-    func onAppear() {
-        session.prepareNavigation(for: dataManager.selectedRoute)
-        fitRoute()
-        refresh(dataManager.selectedRoute)
+  
+  // MARK: - Child managers
+  
+  let dataManager     = MapDataManager()
+  let session         = RideSessionManager()
+  let location        = LocationManager()
+  let workoutManager  = WorkoutDataManager()
+  
+  // MARK: - Map / camera state
+  
+  var cameraPosition : MapCameraPosition = .userLocation(fallback: .automatic)
+  private(set) var cameraHeading: Double = 0
+  
+  // MARK: - Route overlay state
+  
+  private(set) var smoothPts : [CLLocationCoordinate2D] = []
+  private(set) var markers   : [OnLineMarker]           = []
+  
+  // MARK: - UI state
+  
+  var routerOpen        = false
+  var showWorkoutPicker = false          // sheet: pick HealthKit or import file
+  var activeSheet       : VisSheet?      // which visualisation to present
+  
+  enum VisSheet: Identifiable {
+    case sceneKit, playback, filterMap, export
+    var id: Int { hashValue }
+  }
+  
+  // MARK: - Derived
+  
+  var sessionActive: Bool {
+    session.isPreviewingRoute || session.isPreviewPaused || session.routePreviewCompleted || session.isRecording
+  }
+  
+  var arrowRotation: Double { location.userHeading - cameraHeading }
+  
+  var userCoordinate: CLLocationCoordinate2D { location.userLocation }
+  
+  var workoutSamples: [WorkoutSample] { workoutManager.allSamples }
+  
+  var visualizationSamples: [WorkoutSample] {
+    if !workoutSamples.isEmpty { return workoutSamples }
+    guard let route = dataManager.selectedRoute else { return [] }
+    return Self.previewSamples(for: route)
+  }
+  
+  var canVisualizeRoute: Bool {
+    visualizationSamples.count > 1
+  }
+  
+  // MARK: - Lifecycle
+  
+  func onAppear() {
+    session.prepareNavigation(for: dataManager.selectedRoute)
+    fitRoute()
+    refresh(dataManager.selectedRoute)
+    Task { await workoutManager.requestHealthKitPermission() }
+  }
+  
+  func onRouteChanged(_ route: BikeRoute?) {
+    if session.isPreviewingRoute || session.isPreviewPaused || session.routePreviewCompleted {
+      session.stopRoutePreview(clearPath: true)
     }
-
-    func onRouteChanged(_ route: BikeRoute?) {
-        if session.isPreviewingRoute || session.routePreviewCompleted {
-            session.stopRoutePreview(clearPath: true)
-        }
-        session.prepareNavigation(for: route)
-        fitRoute()
-        refresh(route)
-        withAnimation { routerOpen = false }
+    session.prepareNavigation(for: route)
+    fitRoute()
+    refresh(route)
+  }
+  
+  // MARK: - Camera
+  
+  func onCameraChange(_ context: MapCameraUpdateContext) {
+    cameraHeading = context.camera.heading
+  }
+  
+  func fitRoute() {
+    guard let r = dataManager.selectedRoute else { return }
+    withAnimation(.easeInOut(duration: 0.8)) {
+      cameraPosition = .rect(r.mapRect)
     }
-
-    // MARK: - Camera
-
-    func onCameraChange(_ context: MapCameraUpdateContext) {
-        cameraHeading = context.camera.heading
-        if routerOpen { withAnimation { routerOpen = false } }
+  }
+  
+  // MARK: - Route actions
+  
+  func toggleRouter() {
+    withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+      routerOpen.toggle()
     }
-
-    func fitRoute() {
-        guard let r = dataManager.selectedRoute else { return }
-        withAnimation(.easeInOut(duration: 0.8)) {
-            cameraPosition = .rect(r.mapRect)
-        }
+  }
+  
+  func startPreview() {
+    withAnimation { session.startRoutePreview(route: dataManager.selectedRoute) }
+  }
+  
+  func toggleRecording() {
+    withAnimation {
+      routerOpen = false
+      session.toggleRecording(route: dataManager.selectedRoute)
     }
-
-    // MARK: - Actions
-
-    func toggleRouter() {
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
-            routerOpen.toggle()
-        }
+  }
+  
+  func selectRoute(_ id: RideType) {
+    withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
+      dataManager.selectRide(id)
     }
-
-    func startPreview() {
-        withAnimation { session.startRoutePreview(route: dataManager.selectedRoute) }
+    onRouteChanged(dataManager.selectedRoute)
+  }
+  
+  // MARK: - Visualisation entry points
+  
+  func openSceneKit()  { activeSheet = .sceneKit  }
+  func openPlayback()  { activeSheet = .playback  }
+  func openFilters()   { activeSheet = .filterMap }
+  func openExport()    { activeSheet = .export    }
+  
+  // MARK: - Route overlay helpers
+  
+  func routeSegmentColor(_ route: BikeRoute) -> Color {
+    switch route.id {
+    case .leisure:  return .green
+    case .family:   return Color(red: 0.2,  green: 0.75, blue: 0.55)
+    case .bramalea: return Color.creek
+    case .caledon:  return Color(red: 0.12, green: 0.58, blue: 0.48)
+    case .regional: return Color.creekDeep
     }
-
-    func toggleRecording() {
-        withAnimation {
-            routerOpen = false
-            session.toggleRecording(route: dataManager.selectedRoute)
-        }
+  }
+  
+  var statusChipContent: (text: String, color: Color) {
+    if session.isRecording           { return ("LIVE",  .red)   }
+    if session.isPreviewPaused       { return ("PAUSE", .orange) }
+    if session.routePreviewCompleted { return ("DONE",  .green) }
+    return ("READY", .creek)
+  }
+  
+  // MARK: - Private
+  
+  private func refresh(_ route: BikeRoute?) {
+    smoothPts = []; markers = []
+    guard let route else { return }
+    Task.detached(priority: .userInitiated) {
+      let (pts, mrk) = await RouteCache.shared.resolve(route)
+      await MainActor.run { [weak self] in
+        self?.smoothPts = pts
+        self?.markers   = mrk
+      }
     }
-
-    func selectRoute(_ id: RideType) {
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
-            dataManager.selectRide(id)
-        }
+  }
+  
+  private static func previewSamples(for route: BikeRoute) -> [WorkoutSample] {
+    let maxSamples = 900
+    let step = max(1, route.trackPoints.count / maxSamples)
+    let points = stride(from: 0, to: route.trackPoints.count, by: step).map { route.trackPoints[$0] }
+    
+    guard points.count > 1 else { return [] }
+    
+    let start = Date()
+    let nominalSpeed = max(route.distanceMeters / max(route.id.distanceInKm * 6.0 * 60.0, 1), 4.2)
+    var elapsed: TimeInterval = 0
+    var samples: [WorkoutSample] = []
+    samples.reserveCapacity(points.count)
+    
+    for index in points.indices {
+      if index > 0 {
+        elapsed += points[index - 1].location.distance(from: points[index].location) / nominalSpeed
+      }
+      
+      let progress = Double(index) / Double(points.count - 1)
+      let heartRate = previewHeartRate(progress: progress, route: route)
+      samples.append(
+        WorkoutSample(
+          coordinate: points[index],
+          timestamp: start.addingTimeInterval(elapsed),
+          heartRate: heartRate,
+          speed: nominalSpeed,
+          altitude: previewAltitude(progress: progress, route: route),
+          cadence: 78 + sin(progress * .pi * 8) * 8,
+          power: 120 + Double(route.id.distanceInKm) * 1.5 + sin(progress * .pi * 5) * 28
+        )
+      )
     }
-
-    // MARK: - Route overlay helpers
-
-    func routeSegmentColor(_ route: BikeRoute) -> Color {
-        switch route.id {
-        case .leisure:  return .green
-        case .family:   return Color(red: 0.2,  green: 0.75, blue: 0.55)
-        case .bramalea: return Color.creek
-        case .caledon:  return Color(red: 0.12, green: 0.58, blue: 0.48)
-        case .regional: return Color.creekDeep
-        }
-    }
-
-    var statusChipContent: (text: String, color: Color) {
-        if session.isRecording           { return ("LIVE",  .red)   }
-        if session.routePreviewCompleted { return ("DONE",  .green) }
-        return ("READY", .creek)
-    }
-
-    // MARK: - Private
-
-    private func refresh(_ route: BikeRoute?) {
-        smoothPts = []; markers = []
-        guard let route else { return }
-        Task.detached(priority: .userInitiated) {
-            let (pts, mrk) = await RouteCache.shared.resolve(route)
-            await MainActor.run { [weak self] in
-                self?.smoothPts = pts
-                self?.markers   = mrk
-            }
-        }
-    }
+    
+    return samples
+  }
+  
+  private static func previewHeartRate(progress: Double, route: BikeRoute) -> Double {
+    let effort = min(route.id.distanceInKm / 70, 1)
+    return 112 + effort * 34 + sin(progress * .pi * 6) * 16 + progress * 18
+  }
+  
+  private static func previewAltitude(progress: Double, route: BikeRoute) -> Double {
+    let climb = route.id.distanceInKm * 0.9
+    let rolling = sin(progress * .pi * 4) * 12 + sin(progress * .pi * 13) * 5
+    return 185 + climb * progress + rolling
+  }
 }

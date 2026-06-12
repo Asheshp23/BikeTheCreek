@@ -1,12 +1,13 @@
 import Foundation
-import Combine
+import Observation
 
 @MainActor
-class MapDataManager: ObservableObject {
-  @Published private(set) var routes: [BikeRoute] = []
-  @Published var selectedRoute: BikeRoute?
-  @Published var globalPavilions: [BikeWaypoint] = []
-  @Published var cervPositions: [BikeWaypoint] = []
+@Observable
+final class MapDataManager {
+  private(set) var routes: [BikeRoute] = []
+  var selectedRoute: BikeRoute?
+  var globalPavilions: [BikeWaypoint] = []
+  var cervPositions: [BikeWaypoint] = []
   
   init() {
     loadRoutes()
@@ -39,4 +40,3 @@ class MapDataManager: ObservableObject {
     }
   }
 }
-

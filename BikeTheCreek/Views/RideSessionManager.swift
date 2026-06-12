@@ -9,31 +9,34 @@
 import Foundation
 import CoreLocation
 import Combine
+import Observation
 
 @MainActor
-class RideSessionManager: NSObject, ObservableObject, CLLocationManagerDelegate {
-    @Published var currentSpeed: Double = 0.0 // m/s
-    @Published var totalDistance: Double = 0.0 // meters
-    @Published var currentElevation: Double = 0.0
-    @Published var elapsedTime: TimeInterval = 0
-    @Published var isRecording: Bool = false
-    @Published var userPath: [CLLocationCoordinate2D] = []
-    @Published var currentLocation: CLLocation?
-    @Published var heading: CLLocationDirection = 0
-    @Published var navigationCue: NavigationCue?
-    @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
-    @Published var isPreviewingRoute: Bool = false
-    @Published var routePreviewCompleted: Bool = false
+@Observable
+final class RideSessionManager: NSObject, CLLocationManagerDelegate {
+    var currentSpeed: Double = 0.0 // m/s
+    var totalDistance: Double = 0.0 // meters
+    var currentElevation: Double = 0.0
+    var elapsedTime: TimeInterval = 0
+    var isRecording: Bool = false
+    var userPath: [CLLocationCoordinate2D] = []
+    var currentLocation: CLLocation?
+    var heading: CLLocationDirection = 0
+    var navigationCue: NavigationCue?
+    var authorizationStatus: CLAuthorizationStatus = .notDetermined
+    var isPreviewingRoute: Bool = false
+    var isPreviewPaused: Bool = false
+    var routePreviewCompleted: Bool = false
 
-    private let locationManager = CLLocationManager()
-    private var timer: AnyCancellable?
-    private var routePreviewTimer: AnyCancellable?
-    private var lastLocation: CLLocation?
-    private var routeNavigator: RouteNavigator?
-    private var activeRouteID: RideType?
-    private var previewRoute: BikeRoute?
-    private var previewIndex = 0
-    private var previewStep = 1
+    @ObservationIgnored private let locationManager = CLLocationManager()
+    @ObservationIgnored private var timer: AnyCancellable?
+    @ObservationIgnored private var routePreviewTimer: AnyCancellable?
+    @ObservationIgnored private var lastLocation: CLLocation?
+    @ObservationIgnored private var routeNavigator: RouteNavigator?
+    @ObservationIgnored private var activeRouteID: RideType?
+    @ObservationIgnored private var previewRoute: BikeRoute?
+    @ObservationIgnored private var previewIndex = 0
+    @ObservationIgnored private var previewStep = 1
 
     override init() {
         super.init()
@@ -107,6 +110,7 @@ class RideSessionManager: NSObject, ObservableObject, CLLocationManagerDelegate 
         previewIndex = 0
         previewStep = Swift.max(1, route.trackPoints.count / previewFrameCount)
         isPreviewingRoute = true
+        isPreviewPaused = false
         routePreviewCompleted = false
         userPath = []
         totalDistance = 0
@@ -120,18 +124,46 @@ class RideSessionManager: NSObject, ObservableObject, CLLocationManagerDelegate 
             }
     }
     
+    func pauseRoutePreview() {
+        guard isPreviewingRoute, !routePreviewCompleted else { return }
+        routePreviewTimer?.cancel()
+        routePreviewTimer = nil
+        isPreviewingRoute = false
+        isPreviewPaused = true
+    }
+    
+    func resumeRoutePreview() {
+        guard isPreviewPaused, previewRoute != nil, !routePreviewCompleted else { return }
+        isPreviewingRoute = true
+        isPreviewPaused = false
+        routePreviewTimer = Timer.publish(every: routePreviewInterval, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                self?.advanceRoutePreview()
+            }
+    }
+    
+    func toggleRoutePreviewPause() {
+        isPreviewPaused ? resumeRoutePreview() : pauseRoutePreview()
+    }
+    
     func stopRoutePreview(clearPath: Bool = false) {
         routePreviewTimer?.cancel()
         routePreviewTimer = nil
         isPreviewingRoute = false
-        previewRoute = nil
-        previewIndex = 0
+        isPreviewPaused = false
         
         if clearPath {
+            previewRoute = nil
+            previewIndex = 0
             userPath = []
             totalDistance = 0
             elapsedTime = 0
+            currentSpeed = 0
             routePreviewCompleted = false
+        } else if routePreviewCompleted {
+            previewRoute = nil
+            previewIndex = 0
         }
     }
 
@@ -164,7 +196,7 @@ class RideSessionManager: NSObject, ObservableObject, CLLocationManagerDelegate 
     }
     
     private func handleLocationUpdate(_ locations: [CLLocation]) {
-        guard !isPreviewingRoute else { return }
+        guard !isPreviewingRoute, !isPreviewPaused, !routePreviewCompleted else { return }
         guard let location = locations.last, location.horizontalAccuracy >= 0 else { return }
         
         currentLocation = location
@@ -239,6 +271,8 @@ class RideSessionManager: NSObject, ObservableObject, CLLocationManagerDelegate 
             distanceMeters: 0,
             progress: 1
         )
+        currentSpeed = 0
+        isPreviewPaused = false
         routePreviewCompleted = true
         stopRoutePreview()
     }

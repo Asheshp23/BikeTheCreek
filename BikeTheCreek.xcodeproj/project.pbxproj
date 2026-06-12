@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		0F0ADEB42FC4F079004E9A9B /* CoreGPX in Frameworks */ = {isa = PBXBuildFile; productRef = 0F0ADEB32FC4F079004E9A9B /* CoreGPX */; };
+		0F1A73442FD7AFEB0063A984 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F1A73432FD7AFEB0063A984 /* OnboardingView.swift */; };
+		0F1A73462FD7B06D0063A984 /* AboutPrivacyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F1A73452FD7B06D0063A984 /* AboutPrivacyView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,6 +33,8 @@
 		0F0ADE812FC4EBFC004E9A9B /* BikeTheCreek.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BikeTheCreek.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0F0ADE8E2FC4EBFE004E9A9B /* BikeTheCreekTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BikeTheCreekTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0F0ADE982FC4EBFE004E9A9B /* BikeTheCreekUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BikeTheCreekUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0F1A73432FD7AFEB0063A984 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		0F1A73452FD7B06D0063A984 /* AboutPrivacyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutPrivacyView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -98,6 +102,8 @@
 				0F0ADE9B2FC4EBFE004E9A9B /* BikeTheCreekUITests */,
 				0F0ADEB22FC4F079004E9A9B /* Frameworks */,
 				0F0ADE822FC4EBFC004E9A9B /* Products */,
+				0F1A73432FD7AFEB0063A984 /* OnboardingView.swift */,
+				0F1A73452FD7B06D0063A984 /* AboutPrivacyView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -198,7 +204,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2650;
-				LastUpgradeCheck = 2650;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					0F0ADE802FC4EBFC004E9A9B = {
 						CreatedOnToolsVersion = 26.5;
@@ -266,6 +272,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0F1A73462FD7B06D0063A984 /* AboutPrivacyView.swift in Sources */,
+				0F1A73442FD7AFEB0063A984 /* OnboardingView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -358,6 +366,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -415,6 +424,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -431,6 +441,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = BikeTheCreek/Info.plist;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Needed to show workout and create image";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Bike the Creek uses your location to show your cycling position, heading, route progress, and ride metrics.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -465,6 +476,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = BikeTheCreek/Info.plist;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Needed to show workout and create image";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Bike the Creek uses your location to show your cycling position, heading, route progress, and ride metrics.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
