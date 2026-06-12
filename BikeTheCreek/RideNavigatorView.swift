@@ -9,51 +9,50 @@
 import MapKit
 import SwiftUI
 
+// MARK: - Preview option model
+
+private struct PreviewOption: Identifiable {
+  let id: Int
+  let title: String
+  let subtitle: String
+  let color: Color
+}
+
+private let previewOptions: [PreviewOption] = [
+  PreviewOption(id: 0, title: "Standard", subtitle: "On-map flythrough", color: .green),
+  PreviewOption(id: 1, title: "3D",       subtitle: "SceneKit route",    color: .creek),
+  PreviewOption(id: 2, title: "Metal",    subtitle: "Metrics visualizer", color: .creekDeep),
+]
+
+// MARK: - View
+
 struct RideNavigatorView: View {
 
   @State private var vm = RideNavigatorViewModel()
-  
+  @State private var previewOpen = false
+
   var body: some View {
     @Bindable var vm = vm
 
     NavigationStack {
       ZStack {
-        mapView.ignoresSafeArea()
+        mapView
         topBar
         if vm.sessionActive  { activeHUD }
         if !vm.sessionActive { routeCardLayer }
       }
       .animation(.spring(response: 0.34, dampingFraction: 0.82), value: vm.sessionActive)
       .animation(.spring(response: 0.30, dampingFraction: 0.80), value: vm.routerOpen)
+      .animation(.spring(response: 0.28, dampingFraction: 0.78), value: previewOpen)
       .onAppear { vm.onAppear() }
       .accessibilityIdentifier("bike-the-creek-root")
-      .sheet(isPresented: $vm.showWorkoutPicker) {
-        WorkoutPickerSheet(manager: vm.workoutManager)
-          .presentationDetents([.medium, .large])
-      }
       .sheet(item: $vm.activeSheet) { sheet in
         NavigationStack {
           switch sheet {
-          case .sceneKit:
-            SceneKitRouteView(samples: vm.visualizationSamples)
-          case .playback:
-            MetricsPlaybackView(samples: vm.visualizationSamples)
-          case .filterMap:
-            MapFilterPlaybackView(samples: vm.visualizationSamples)
-          case .export:
-            WorkoutExportView(samples: vm.visualizationSamples)
+          case .sceneKit:  SceneKitRouteView(samples: vm.visualizationSamples)
+          case .playback:  MetricsPlaybackView(samples: vm.visualizationSamples)
           }
         }
-      }
-      .confirmationDialog("Choose Preview Mode", isPresented: $vm.showPreviewPicker, titleVisibility: .visible) {
-        Button("Standard") { vm.startPreview() }
-        if vm.canVisualizeRoute {
-          Button("3D") { vm.openSceneKit() }
-          Button("Metal") { vm.openPlayback() }
-        }
-        Button("Cancel", role: .cancel) { }
-      } message: {
-        Text("Select how you'd like to preview this route.")
       }
     }
   }
@@ -97,11 +96,6 @@ struct RideNavigatorView: View {
         }
       }
 
-      if vm.workoutSamples.count > 1 {
-        MapPolyline(coordinates: vm.workoutSamples.map(\.coordinate))
-          .stroke(Color.orange.opacity(0.6), lineWidth: 2)
-      }
-
       Annotation("", coordinate: vm.userCoordinate, anchor: .center) {
         ZStack {
           Circle().fill(.white).frame(width: 36, height: 36)
@@ -132,22 +126,6 @@ struct RideNavigatorView: View {
           .padding(.leading, 16)
           .padding(.top, 8)
         Spacer()
-        Button {
-          vm.showWorkoutPicker = true
-        } label: {
-          Image(systemName: vm.workoutSamples.isEmpty
-                ? "bicycle" : "bicycle.circle.fill")
-          .font(.system(size: 16, weight: .bold))
-          .foregroundStyle(vm.workoutSamples.isEmpty ? Color.creek : .white)
-          .frame(width: 36, height: 36)
-          .background(vm.workoutSamples.isEmpty
-                      ? Color.creek.opacity(0.15) : Color.creek)
-          .clipShape(Circle())
-          .shadow(color: .black.opacity(0.2), radius: 6, y: 2)
-        }
-        .padding(.trailing, 8)
-        .padding(.top, 8)
-
         IconBtn(icon: "scope", tint: .creek) { vm.fitRoute() }
           .padding(.trailing, 16)
           .padding(.top, 8)
@@ -192,8 +170,70 @@ struct RideNavigatorView: View {
         routeSwitcher
           .transition(.move(edge: .bottom).combined(with: .opacity))
       }
+      if previewOpen {
+        previewPanel
+          .transition(.move(edge: .bottom).combined(with: .opacity))
+      }
       compactCard
     }
+  }
+
+  // MARK: - Preview panel (styled identically to route switcher)
+
+  private var previewPanel: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("PREVIEW MODE")
+        .font(.f(9, .black))
+        .foregroundStyle(Color.white.opacity(0.40))
+        .tracking(1.4)
+        .padding(.horizontal, 4)
+
+      ForEach(previewOptions) { option in
+        previewRow(option)
+      }
+    }
+    .padding(12)
+    .background(
+      Color.surface
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous)))
+    .overlay(
+      RoundedRectangle(cornerRadius: 16, style: .continuous)
+        .strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+    .shadow(color: .black.opacity(0.3), radius: 16, y: 4)
+    .frame(maxWidth: 280)
+  }
+
+  private func previewRow(_ option: PreviewOption) -> some View {
+    let available = option.id == 0 || vm.canVisualizeRoute
+    return Button {
+      guard available else { return }
+      withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+        previewOpen = false
+      }
+      switch option.id {
+      case 0: vm.startPreview()
+      case 1: vm.openSceneKit()
+      default: vm.openPlayback()
+      }
+    } label: {
+      HStack(spacing: 10) {
+        Circle()
+          .fill(available ? option.color : option.color.opacity(0.3))
+          .frame(width: 8, height: 8)
+        Text(option.title)
+          .font(.f(13, .black))
+          .foregroundStyle(available ? .white : Color.white.opacity(0.30))
+        Spacer()
+        Text(option.subtitle)
+          .font(.mono(11, .regular))
+          .foregroundStyle(available ? option.color : option.color.opacity(0.3))
+      }
+      .padding(.horizontal, 8).padding(.vertical, 7)
+      .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+    .buttonStyle(Bounce())
+    .disabled(!available)
   }
 
   // MARK: - Compact card
@@ -229,7 +269,12 @@ struct RideNavigatorView: View {
         Spacer(minLength: 10)
 
         HStack(spacing: 6) {
-          Button { vm.toggleRouter() } label: {
+          Button {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+              vm.routerOpen.toggle()
+              if vm.routerOpen { previewOpen = false }
+            }
+          } label: {
             Image(systemName: vm.routerOpen ? "xmark" : "list.bullet")
               .font(.system(size: 13, weight: .bold))
               .foregroundStyle(Color.creek)
@@ -238,10 +283,17 @@ struct RideNavigatorView: View {
               .clipShape(Circle())
           }
 
-          Button { vm.showRoutePreview() } label: {
+          Button {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+              previewOpen.toggle()
+              if previewOpen { vm.routerOpen = false }
+            }
+          } label: {
             HStack(spacing: 4) {
-              Image(systemName: "play.fill").font(.system(size: 11, weight: .black))
-              Text("Preview").font(.f(12, .black)).tracking(0.8)
+              Image(systemName: previewOpen ? "xmark" : "play.fill")
+                .font(.system(size: 11, weight: .black))
+              Text(previewOpen ? "Close" : "Preview")
+                .font(.f(12, .black)).tracking(0.8)
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 13)
@@ -279,30 +331,6 @@ struct RideNavigatorView: View {
         .padding(.horizontal, 4)
 
       ForEach(vm.dataManager.routes) { route in routeRow(route) }
-
-      Rectangle()
-        .fill(Color.white.opacity(0.08))
-        .frame(height: 0.5)
-        .padding(.vertical, 2)
-
-      Button { vm.toggleRecording() } label: {
-        HStack(spacing: 7) {
-          Image(systemName: vm.session.isRecording ? "stop.fill" : "record.circle")
-            .font(.system(size: 13, weight: .black))
-          Text(vm.session.isRecording ? "STOP RIDE" : "RECORD RIDE")
-            .font(.f(13, .black)).tracking(0.6)
-        }
-        .foregroundStyle(.white)
-        .frame(maxWidth: .infinity, minHeight: 44)
-        .background(
-          vm.session.isRecording
-          ? AnyView(Color.red)
-          : AnyView(LinearGradient(colors: [.creek, .creekDeep],
-                                   startPoint: .leading, endPoint: .trailing)))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-      }
-      .buttonStyle(Bounce())
-      .accessibilityIdentifier("start-stop-ride-button")
     }
     .padding(12)
     .background(
@@ -343,6 +371,8 @@ struct RideNavigatorView: View {
     .buttonStyle(Bounce())
     .accessibilityIdentifier(route.id.routeCardAccessibilityID)
   }
+
+  // MARK: - Shared subviews
 
   private var statusChip: some View {
     let (t, c) = vm.statusChipContent
